@@ -1,0 +1,20 @@
+dqn:
+  layers: [64, 64]
+  activations: ['relu', 'relu', 'relu']
+  lr: 0.005
+  gamma: 0.90
+  epsilon: 1.0
+  epsilon_decay: 0.995
+  epsilon_min: 0.01
+  deque_len: 2000
+  batch_size: 64
+main:
+  total_episodes: 25000
+  episode_len: 50
+  num_agents: 2
+  optimal_step_limit: 20
+  save_model_after: 100
+  display: 1
+  evaluate: 0
+  save_dir: "save-dir/dqn-shared-params/checkpoints/"
+  plot_dir: "save-dir/dqn-shared-params/plots"
