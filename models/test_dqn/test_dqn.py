@@ -43,7 +43,7 @@ for episode in range(50000):
         if step % 25 == 0:
             dqn.update_target()
     ep_rew_list.append(ep_rew)
-    avg_rew = np.mean(ep_rew_list[-100:])
+    avg_rew = np.mean(ep_rew_list[-10:])
     avg_rew_list.append(avg_rew)
 
     with summary_writer.as_default():

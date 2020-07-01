@@ -58,6 +58,7 @@ def run(config_file=None, head=None):
                     ddpg_state.append(prev_dqn_actions[j])
             ddpg_states.append(ddpg_state)
 
+        step = 0
         for step in range(1, config["max_steps"]):
             env.render()
 
@@ -86,7 +87,7 @@ def run(config_file=None, head=None):
             dqn_actions = actions
 
             next_states, rewards, dones, infos = env.step(dqn_actions)
-            ep_rew = np.mean(rewards)
+            ep_rew += np.mean(rewards)
 
             ddpg_next_actions = [ddpg.policy(
                     tf.expand_dims(tf.convert_to_tensor(ddpg_next_state), 0)) for ddpg_next_state in ddpg_next_states]
@@ -134,6 +135,7 @@ def run(config_file=None, head=None):
         with summary_writer.as_default():
             tf.summary.scalar('episode reward', ep_rew, step=episode)
             tf.summary.scalar('running average reward (100)', avg_rew, step=episode)
+            tf.summary.scalar('mean episode reward', ep_rew/step, step=episode)
 
         if episode % config["checkpoint"] == 0:
             if not os.path.exists(config["save_dir"]):
@@ -147,6 +149,8 @@ def run(config_file=None, head=None):
             ddpg.target_critic.save_weights(os.path.join(config["save_dir"], "ddpg_critic_target_weights.h5"))
 
         print("Episode * {} * Avg Reward is ==> {}".format(episode, avg_rew))
+        print("All dones * {} * exploration is ==> {}".format(all(dones), dqn.epsilon))
+        print()
 
         if avg_rew > -0.3:
             count += 1
