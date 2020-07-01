@@ -1,6 +1,6 @@
 import pickle
 
-from modules.dqn.dqn import DQN
+from modules.dqn.dqn_old import DQN
 from utils import read_config
 from environments.multiagent_particle_envs.make_env import make_env
 

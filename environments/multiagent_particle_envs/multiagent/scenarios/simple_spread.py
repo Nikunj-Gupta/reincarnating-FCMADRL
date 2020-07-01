@@ -81,19 +81,14 @@ class Scenario(BaseScenario):
                     rew -= 1
         return rew
 
-    def is_done(self, agent, world):
-        occupied_landmarks = 0
+    def is_done(self, agent, world): # if all agents go beyond a certain threshold, close the episode; set done to true
+        # done would mean end of episode due to unacceptable distancing of all the agents
         min_dists = 0
-        # for i in range(len(world.agents)):
-        #     world.agents[i].state.p_pos = world.landmarks[i].state.p_pos
-        #     break
         for l in world.landmarks:
             dists = [np.sqrt(np.sum(np.square(a.state.p_pos - l.state.p_pos))) for a in world.agents]
             min_dists += min(dists)
-            if min(dists) < 0.1:
-                occupied_landmarks += 1
-        if occupied_landmarks == len(world.landmarks):
-            return True
+            if min(dists) > 2.0:
+                return True
         return False
 
     def observation(self, agent, world):

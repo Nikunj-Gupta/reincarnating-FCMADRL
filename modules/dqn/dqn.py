@@ -1,91 +1,104 @@
-from collections import deque
-
 from utils import read_config
 
-from keras.models import Sequential, load_model
-from keras.layers import Dense
-from keras.optimizers import Adam
-
+from keras import layers, Model, optimizers, losses
 import numpy as np
-import random
-from collections import deque
+import tensorflow as tf
 
 
 class DQN:
-    """
-    Observation_Space: Tuple of shape of state vector
-    Action_Space: List of actions
-    """
-    def __init__(self, config_file=None, observation_space=None, action_n=None):
-        print("DQN Initialised")
-        if config_file:
-            self.config = read_config(config_file, head="dqn")
+    def __init__(self, config_file=None, head=None, num_states=None, num_actions=None):
+        self.config = read_config(file=config_file, head=head)
 
-        self.observation_space = observation_space
-        self.action_space = list(range(action_n))
-
-        self.epsilon = self.config["epsilon"]
-        self.epsilon_decay = self.config["epsilon_decay"]
-        self.epsilon_min = self.config["epsilon_min"]
-        self.batch_size = self.config["batch_size"]
         self.gamma = self.config["gamma"]
+        self.epsilon = self.config["epsilon"]
+        self.epsilon_min = self.config["epsilon_min"]
+        self.epsilon_decay = self.config["epsilon_decay"]
+        self.batch_size = self.config["batch_size"]
+        self.layers = self.config["layers"]
+        self.activations = self.config["activations"]
 
-        self.memory = deque(maxlen=self.config["deque_len"])
-        self.model = self.dqn_network()
-        self.target = self.dqn_network()
+        self.num_states = num_states
+        self.num_actions = num_actions
 
-    def dqn_network(self):
-        model = Sequential()
+        self.model = self.create_q_model()
+        self.model_target = self.create_q_model()
+        self.model_target.set_weights(self.model.get_weights())
+        self.optimizer = optimizers.Adam(learning_rate=self.config["learning_rate"], clipnorm=self.config["clipnorm"])
 
-        # Input layer
-        model.add(Dense(self.config["layers"][0], input_dim=self.observation_space[0], activation=self.config["activations"][0]))
+        self.state_history = []
+        self.action_history = []
+        self.reward_history = []
+        self.next_state_history = []
+        self.done_history = []
+        self.max_memory_len = self.config["max_memory_len"]
 
-        # Hidden Layers
-        for i in range(1, len(self.config["layers"])):
-            model.add(Dense(self.config["layers"][i], activation=self.config["activations"][i]))
+        # self.update_after_actions = self.config[""]
+        self.loss_fn = losses.Huber()
 
-        # Output layer
-        model.add(Dense(len(self.action_space)))
+    def create_q_model(self):
+        inputs = layers.Input(shape=(self.num_states,))
 
-        model.compile(loss="mean_squared_error", optimizer=Adam(lr=self.config["lr"]))
+        layer = layers.Dense(self.layers[0], activation=self.activations[0])(inputs)
+        for i in range(1, len(self.layers)):
+            layer = layers.Dense(self.layers[i], activation=self.activations[i])(layer)
 
+        outputs = layers.Dense(self.num_actions, activation="linear")(layer)
+
+        model = Model(inputs=inputs, outputs=outputs)
         return model
 
+    def add_experience(self, observation_tuple=None):
+        if len(self.done_history) > self.max_memory_len:
+            del self.state_history[:1]
+            del self.action_history[:1]
+            del self.reward_history[:1]
+            del self.next_state_history[:1]
+            del self.done_history[:1]
+        self.state_history.append(observation_tuple[0])
+        self.action_history.append(observation_tuple[1])
+        self.reward_history.append(observation_tuple[2])
+        self.next_state_history.append(observation_tuple[3])
+        self.done_history.append(observation_tuple[4])
+
+    def train(self):
+        if len(self.done_history) >= self.batch_size:
+            indices = np.random.choice(range(len(self.done_history)), size=self.batch_size)
+
+            state_sample = np.array([self.state_history[i] for i in indices])
+            action_sample = [self.action_history[i] for i in indices]
+            reward_sample = [self.reward_history[i] for i in indices]
+            next_state_sample = np.array([self.next_state_history[i] for i in indices])
+            done_sample = tf.convert_to_tensor([float(self.done_history[i]) for i in indices])
+
+            future_rewards = self.model_target(next_state_sample)
+            updated_q_values = reward_sample + self.gamma * tf.reduce_max(future_rewards, axis=1)
+
+            updated_q_values = updated_q_values * (1 - done_sample) - done_sample
+            # masks = tf.one_hot(action_sample, self.num_actions)
+            # masks = tf.cast(masks, tf.float32)
+
+            with tf.GradientTape() as tape:
+                q_values = self.model(state_sample)
+                q_action = tf.reduce_sum(q_values, axis=1)
+                loss = self.loss_fn(updated_q_values, q_action)
+
+            grads = tape.gradient(loss, self.model.trainable_variables)
+            self.optimizer.apply_gradients(zip(grads, self.model.trainable_variables))
+
     def act(self, state, evaluate=False):
-        if evaluate:
-            return np.argmax(self.model.predict(state)[0])
-        self.epsilon *= self.epsilon_decay
-        self.epsilon = max(self.epsilon_min, self.epsilon)
-        if np.random.random() < self.epsilon:
-            return random.choice(self.action_space)
-        return np.argmax(self.model.predict(state)[0])
+        if (self.epsilon > np.random.random(1)[0]) and (not evaluate):
+            self.epsilon = max(self.epsilon_min, self.epsilon * self.epsilon_decay)
+            return np.random.choice(self.num_actions)
+        state = tf.convert_to_tensor(state)
+        state = tf.expand_dims(state, 0)
+        action_probabilities = self.model(state, training=False)
+        return tf.argmax(action_probabilities[0]).numpy()
 
-    def experience(self, s, a, r, ns, done):
-        self.memory.append([s, a, r, ns, done])
+    def update_target(self):
+        self.model_target.set_weights(self.model.get_weights())
 
-    def replay(self):
-        if len(self.memory) < self.batch_size:
-            return
 
-        samples = random.sample(self.memory, self.batch_size)
-        for sample in samples:
-            s, a, r, ns, done = sample
-            target = self.target.predict(s)
-            if done:
-                target[0][a] = r
-            else:
-                target[0][a] = r + self.gamma * (max(self.target.predict(ns)[0]))
-            self.model.fit(s, target, epochs=1, verbose=1)
-
-    def target_train(self):
-        # model_weights = self.model.get_weights()
-        # target_weights = self.target.get_weights()
-        # for i in range(len(target_weights)):
-        #     target_weights[i] = model_weights[i]
-        self.target.set_weights(self.model.get_weights())
-
-    def save_model(self, fn):
-        self.model.save(fn)
-
-    def load_model(self, path):
-        self.model = load_model(path)
+if __name__ == '__main__':
+    dqn = DQN(config_file="configs/config.yaml", head="dqn", num_states=3, num_actions=1)
+    for i in range(10):
+        print("action: ", dqn.act(tf.random.uniform(shape=(3, )), evaluate=False))
