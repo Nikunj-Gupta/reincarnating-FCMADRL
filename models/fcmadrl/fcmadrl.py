@@ -7,6 +7,18 @@ import tensorflow as tf
 import numpy as np
 import os
 
+# os.environ['CUDA_VISIBLE_DEVICES'] = '-1'
+# os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
+# tf.compat.v1.enable_eager_execution()
+# physical_devices = tf.config.list_physical_devices('GPU')
+# tf.config.experimental.set_memory_growth(physical_devices[0], True)
+gpus = tf.config.experimental.list_physical_devices('GPU')
+if gpus:
+  try:
+    tf.config.experimental.set_virtual_device_configuration(gpus[0], [tf.config.experimental.VirtualDeviceConfiguration(memory_limit=1200)])
+  except RuntimeError as e:
+    print(e)
+
 
 def run(config_file=None, head=None):
     # load config
@@ -69,7 +81,10 @@ def run(config_file=None, head=None):
             for i in range(config["num_agents"]):
                 dqn_state = []
                 dqn_state.extend(curr_states[i])
-                dqn_state.extend(ddpg_actions[i][0])
+                if ddpg_actions[i][0].shape != ():
+                    dqn_state.extend(ddpg_actions[i][0])
+                else:
+                    dqn_state.append(ddpg_actions[i][0])
                 dqn_states.append(dqn_state)
 
             dqn_actions = [dqn.act(state, evaluate=False) for state in dqn_states]
@@ -96,7 +111,10 @@ def run(config_file=None, head=None):
             for i in range(len(dqn_states)):
                 dqn_ns = []
                 dqn_ns.extend(next_states[i])
-                dqn_ns.extend(ddpg_next_actions[i][0])
+                if ddpg_actions[i][0].shape != ():
+                    dqn_ns.extend(ddpg_next_actions[i][0])
+                else:
+                    dqn_ns.append(ddpg_next_actions[i][0])
                 dqn_next_states.append(dqn_ns)
 
             for i in range(config["num_agents"]):
@@ -129,12 +147,12 @@ def run(config_file=None, head=None):
                 break
 
         ep_rew_list.append(ep_rew)
-        avg_rew = np.mean(ep_rew_list[-100:])
+        avg_rew = np.mean(ep_rew_list[-10:])
         avg_rew_list.append(avg_rew)
 
         with summary_writer.as_default():
             tf.summary.scalar('episode reward', ep_rew, step=episode)
-            tf.summary.scalar('running average reward (100)', avg_rew, step=episode)
+            tf.summary.scalar('running average reward (10)', avg_rew, step=episode)
             tf.summary.scalar('mean episode reward', ep_rew/step, step=episode)
 
         if episode % config["checkpoint"] == 0:
@@ -148,7 +166,7 @@ def run(config_file=None, head=None):
             ddpg.target_actor.save_weights(os.path.join(config["save_dir"], "ddpg_actor_target_weights.h5"))
             ddpg.target_critic.save_weights(os.path.join(config["save_dir"], "ddpg_critic_target_weights.h5"))
 
-        print("Episode * {} * Avg Reward is ==> {}".format(episode, avg_rew))
+        print("Episode * {} * Reward ==> {} Avg Reward is ==> {}".format(episode, ep_rew, avg_rew))
         print("All dones * {} * exploration is ==> {}".format(all(dones), dqn.epsilon))
         print()
 
@@ -162,4 +180,4 @@ def run(config_file=None, head=None):
 
 
 if __name__ == '__main__':
-    run(config_file="configs/fcmadrl.yaml", head="fcmadrl")
+    run(config_file="configs/fcmadrl_7.yaml", head="fcmadrl")

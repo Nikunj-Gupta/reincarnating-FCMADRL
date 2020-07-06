@@ -65,7 +65,7 @@ class DQN:
             indices = np.random.choice(range(len(self.done_history)), size=self.batch_size)
 
             state_sample = np.array([self.state_history[i] for i in indices])
-            action_sample = [self.action_history[i] for i in indices]
+            action_sample = [np.where(self.action_history[i]==1.0)[0][0] for i in indices]
             reward_sample = [self.reward_history[i] for i in indices]
             next_state_sample = np.array([self.next_state_history[i] for i in indices])
             done_sample = tf.convert_to_tensor([float(self.done_history[i]) for i in indices])
@@ -74,12 +74,13 @@ class DQN:
             updated_q_values = reward_sample + self.gamma * tf.reduce_max(future_rewards, axis=1)
 
             updated_q_values = updated_q_values * (1 - done_sample) - done_sample
-            # masks = tf.one_hot(action_sample, self.num_actions)
-            # masks = tf.cast(masks, tf.float32)
+
+            masks = tf.one_hot(action_sample, self.num_actions)
 
             with tf.GradientTape() as tape:
                 q_values = self.model(state_sample)
-                q_action = tf.reduce_sum(q_values, axis=1)
+                # q_action = tf.reduce_sum(q_values, axis=1)
+                q_action = tf.reduce_sum(tf.multiply(q_values, masks), axis=1)
                 loss = self.loss_fn(updated_q_values, q_action)
 
             grads = tape.gradient(loss, self.model.trainable_variables)
@@ -87,7 +88,6 @@ class DQN:
 
     def act(self, state, evaluate=False):
         if (self.epsilon > np.random.random(1)[0]) and (not evaluate):
-            self.epsilon = max(self.epsilon_min, self.epsilon * self.epsilon_decay)
             return np.random.choice(self.num_actions)
         state = tf.convert_to_tensor(state)
         state = tf.expand_dims(state, 0)
@@ -96,6 +96,7 @@ class DQN:
 
     def update_target(self):
         self.model_target.set_weights(self.model.get_weights())
+        self.epsilon = max(self.epsilon_min, self.epsilon * self.epsilon_decay)
 
 
 if __name__ == '__main__':

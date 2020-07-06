@@ -1,0 +1,48 @@
+dqn:
+  layers: [64, 64]
+  activations: ['relu', 'relu']
+  learning_rate: 0.02
+  clipnorm: 1.0
+  gamma: 0.95
+  epsilon: 1.0
+  epsilon_decay: 0.9999
+  epsilon_min: 0.1
+  max_memory_len: 250000
+  batch_size: 1024
+ddpg:
+  std_dev: 0.2
+  input_dims: 64
+  input_activation: "relu"
+  output_dims: 1
+  output_activation: "tanh"
+  buffer_capacity: 250000
+  batch_size: 64
+  gamma: 0.95
+  critic_lr: 0.02
+  actor_lr: 0.01
+  tau: 0.05
+  actor:
+    layers: [64]
+    activations: ['relu']
+  critic:
+    state_out_layers: [32]
+    state_out_activations: ["relu"]
+    action_out_layers: [32]
+    action_out_activations: ["relu"]
+    out_layers: [64]
+    out_activations: ["relu"]
+fcmadrl:
+  max_episodes: 60000
+  max_steps: 25
+  num_agents: 2
+  dqn_update_target_network: 20
+  checkpoint: 50
+  logs_dir: "logs/fcmadrl_exp_3"
+  save_dir: "save-dir/fcmadrl_exp_3"
+  communication:
+    message_len: 1
+    lower_bound: -2.0
+    upper_bound: 2.0
+weights:
+  dqn_model: "save-dir/fcmadrl_exp_3/dqn_model_weights.h5"
+  dqn_model_target: "save-dir/fcmadrl_exp_3/dqn_model_target_weights.h5"

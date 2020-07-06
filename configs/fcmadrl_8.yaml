@@ -1,0 +1,52 @@
+dqn:
+  layers: [200, 300, 200]
+  activations: ['relu', 'relu', 'relu']
+  learning_rate: 0.002
+  clipnorm: 1.0
+  gamma: 0.99
+  epsilon: 1.0
+  epsilon_decay: 0.9999
+  epsilon_min: 0.01
+  max_memory_len: 50000
+  batch_size: 64
+ddpg:
+  std_dev: 0.2
+  input_dims: 64
+  input_activation: "relu"
+  output_dims: 1
+  output_activation: "tanh"
+  buffer_capacity: 50000
+  batch_size: 64
+  gamma: 0.99
+  critic_lr: 0.002
+  actor_lr: 0.001
+  tau: 0.005
+  actor:
+    layers: [64, 64]
+    activations: ['relu', 'relu']
+  critic:
+    state_out_layers: [64]
+    state_out_activations: ["relu"]
+    action_out_layers: [32]
+    action_out_activations: ["relu"]
+    out_layers: [64]
+    out_activations: ["relu"]
+fcmadrl:
+  max_episodes: 60000
+  max_steps: 25
+  num_agents: 2
+  dqn_update_target_network: 10
+  checkpoint: 50
+  logs_dir: "logs/fcmadrl_exp_8"
+  save_dir: "save-dir/fcmadrl_exp_8"
+  communication:
+    message_len: 1
+    lower_bound: -2.0
+    upper_bound: 2.0
+  weights:
+    dqn_model: "save-dir/fcmadrl_exp_8/dqn_model_weights.h5"
+    dqn_model_target: "save-dir/fcmadrl_exp_8/dqn_model_target_weights.h5"
+    ddpg_actor: "save-dir/fcmadrl_exp_8/ddpg_actor_model_weights.h5"
+    ddpg_critic: "save-dir/fcmadrl_exp_8/ddpg_critic_model_weights.h5"
+    ddpg_actor_target: "save-dir/fcmadrl_exp_8/ddpg_actor_target_weights.h5"
+    ddpg_critic_target: "save-dir/fcmadrl_exp_8/ddpg_critic_target_weights.h5"

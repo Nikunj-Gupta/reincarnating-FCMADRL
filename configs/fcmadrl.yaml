@@ -43,3 +43,6 @@ fcmadrl:
     message_len: 5
     lower_bound: -5.0
     upper_bound: 5.0
+weights:
+  dqn_model: "save-dir/fcmadrl_exp_2/dqn_model_weights.h5"
+  dqn_model_target: "save-dir/fcmadrl_exp_2/dqn_model_target_weights.h5"

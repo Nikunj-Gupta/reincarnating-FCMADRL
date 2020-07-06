@@ -4,3 +4,11 @@ tensorflow
 keras
 tqdm
 matplotlib
+tf-agents
+imageio
+pyglet
+PILLOW
+pyvirtualdisplay
+tensorflow-estimator
+pandas
+ray

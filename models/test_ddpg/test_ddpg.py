@@ -2,11 +2,18 @@ from modules.ddpg.ddpg import DDPG
 from utils import read_config
 
 import tensorflow as tf
+gpus = tf.config.experimental.list_physical_devices('GPU')
+if gpus:
+  try:
+    tf.config.experimental.set_virtual_device_configuration(gpus[0], [tf.config.experimental.VirtualDeviceConfiguration(memory_limit=1200)])
+  except RuntimeError as e:
+    print(e)
 import gym
 import numpy as np
 import matplotlib.pyplot as plt
 
 config = read_config(file="configs/config.yaml", head="main")
+
 
 problem = "Pendulum-v0"
 env = gym.make(problem)
@@ -19,13 +26,13 @@ ddpg = DDPG(
     action_lower_bound=env.action_space.low[0],
     action_upper_bound=env.action_space.high[0]
     )
-
+summary_writer = tf.summary.create_file_writer("logs/test_ddpg")
 
 ep_rew_list = []
 avg_rew_list = []
 
 
-for episode in range(100):
+for episode in range(10000):
     curr_state = env.reset()
     ep_rew = 0
     while True:
@@ -48,7 +55,13 @@ for episode in range(100):
     ep_rew_list.append(ep_rew)
     avg_rew = np.mean(ep_rew_list[-40:])
     avg_rew_list.append(avg_rew)
+
+    with summary_writer.as_default():
+        tf.summary.scalar('episode reward', ep_rew, step=episode)
+        tf.summary.scalar('running average reward (100)', avg_rew, step=episode)
+
     print("Episode * {} * Avg Reward is ==> {}".format(episode, avg_rew))
+
 
 plt.plot(avg_rew_list)
 plt.xlabel("Episode")

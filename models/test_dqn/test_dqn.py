@@ -6,6 +6,8 @@ import numpy as np
 import matplotlib.pyplot as plt
 from tqdm import tqdm
 import tensorflow as tf
+import os
+os.environ['CUDA_VISIBLE_DEVICES'] = '-1'
 
 config = read_config(file="configs/config.yaml", head="main")
 
@@ -22,16 +24,18 @@ dqn = DQN(
 ep_rew_list = []
 avg_rew_list = []
 
-summary_writer = tf.summary.create_file_writer("models/test_dqn/logs/")
-for episode in range(50000):
+summary_writer = tf.summary.create_file_writer("logs/test_dqn")
+for episode in range(20000):
     curr_state = env.reset()
     ep_rew = 0
     count = 0
     for step in tqdm(range(200)):
         env.render()
+        action_mask = np.zeros(env.action_space.n)
         action = dqn.act(curr_state, evaluate=False)
+        action_mask[action] = 1.0
         next_state, reward, done, info = env.step(action)
-        dqn.add_experience(observation_tuple=(curr_state, action, reward, next_state, done))
+        dqn.add_experience(observation_tuple=(curr_state, action_mask, reward, next_state, done))
 
         ep_rew += reward
         curr_state = next_state
@@ -40,7 +44,7 @@ for episode in range(50000):
         if done:
             break
 
-        if step % 25 == 0:
+        if step % 250 == 0:
             dqn.update_target()
     ep_rew_list.append(ep_rew)
     avg_rew = np.mean(ep_rew_list[-10:])

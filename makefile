@@ -7,7 +7,7 @@ plot:
 
 ddpg:
 	clear
-	PYTHONPATH=$(PWD) python models/test_ddpg/test_ddpg.py
+	PYTHONPATH=$(PWD) python modules/ddpg_new/ddpg.py
 
 dqn:
 	clear
@@ -15,4 +15,28 @@ dqn:
 
 fcmadrl:
 	clear
-	PYTHONPATH=$(PWD) python models/fcmadrl/fcmadrl.py
+	PYTHONPATH=$(PWD) python models/fcmadrl/dqn.py
+
+evaluate:
+	clear
+	PYTHONPATH=$(PWD) python models/fcmadrl/evaluate_dqn.py
+
+ddpg_nav:
+	clear
+	PYTHONPATH=$(PWD) python models/fcmadrl/ddpg.py
+
+dqn_nav:
+	clear
+	PYTHONPATH=$(PWD) python models/fcmadrl/dqn.py
+
+tf_agents:
+	clear
+	PYTHONPATH=$(PWD) python models/tf_agents/dqn_cartpole.py
+
+rllib:
+	clear
+	PYTHONPATH=$(PWD) python models/rllib/dqn.py
+
+keras-rl:
+	clear
+	PYTHONPATH=$(PWD) python models/keras-rl/ddpg.py
